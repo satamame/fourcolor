@@ -1,0 +1,9 @@
+# アイデアの原本 (リポジトリには含めない)
+過去のメモ/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Claude Code のローカル設定
+.claude/settings.local.json
