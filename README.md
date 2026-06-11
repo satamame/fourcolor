@@ -16,6 +16,11 @@
 - [docs/06_行ラベリング結果.md](docs/06_行ラベリング結果.md) —
   docs/05 の実装（[fourcolor/rowlabel.py](fourcolor/rowlabel.py)）と
   3サンプルでのラベル付け結果。baseline の縮約との一致を機械検証済み。
+- [docs/07_アイデア_ラベル4値化.md](docs/07_アイデア_ラベル4値化.md) —
+  検討中のアイデア2件（行ラベルの操作による4値化／斜めラベリングとの重ね合わせ）と評価。
+- [docs/08_実験2A_方向とビット分解.md](docs/08_実験2A_方向とビット分解.md) —
+  4彩色のXORクラス分解と国境の幾何方向の相関測定
+  （[fourcolor/tait.py](fourcolor/tait.py)、`experiments/exp2a_tait.py`）。
 - [docs/01_アイデア整理と検証.md](docs/01_アイデア整理と検証.md) —
   これまでのアイデアメモの整理と数学的検証。
 - [docs/02_開発計画.md](docs/02_開発計画.md) — フェーズ別ロードマップとリポジトリ構成。
