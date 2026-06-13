@@ -21,6 +21,10 @@
 - [docs/08_実験2A_方向とビット分解.md](docs/08_実験2A_方向とビット分解.md) —
   4彩色のXORクラス分解と国境の幾何方向の相関測定
   （[fourcolor/tait.py](fourcolor/tait.py)、`experiments/exp2a_tait.py`）。
+- [docs/09_アイデア_2軸ラベル表.md](docs/09_アイデア_2軸ラベル表.md) —
+  横ラベル・縦ラベルを2軸にした表が元の地図と同値であることの検証
+  （Q1: 同ラベルの統合は可逆／Q2: 両ルール ⟺ 地図の塗り分け。
+  `experiments/exp3_two_axis_labeling.py`）。
 - [docs/01_アイデア整理と検証.md](docs/01_アイデア整理と検証.md) —
   これまでのアイデアメモの整理と数学的検証。
 - [docs/02_開発計画.md](docs/02_開発計画.md) — フェーズ別ロードマップとリポジトリ構成。
