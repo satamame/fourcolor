@@ -23,8 +23,9 @@
   （[fourcolor/tait.py](fourcolor/tait.py)、`experiments/exp2a_tait.py`）。
 - [docs/09_アイデア_2軸ラベル表.md](docs/09_アイデア_2軸ラベル表.md) —
   横ラベル・縦ラベルを2軸にした表が元の地図と同値であることの検証
-  （Q1: 同ラベルの統合は可逆／Q2: 両ルール ⟺ 地図の塗り分け。
-  `experiments/exp3_two_axis_labeling.py`）。
+  （Q1: 同ラベルの統合は可逆／Q2: 両ルール ⟺ 地図の塗り分け）と、
+  区切り・仮色値を持つ表の生成（[fourcolor/axistable.py](fourcolor/axistable.py)、
+  `python samples/axistable_demo.py`、`experiments/exp3_two_axis_labeling.py`）。
 - [docs/01_アイデア整理と検証.md](docs/01_アイデア整理と検証.md) —
   これまでのアイデアメモの整理と数学的検証。
 - [docs/02_開発計画.md](docs/02_開発計画.md) — フェーズ別ロードマップとリポジトリ構成。
@@ -50,6 +51,9 @@ python -m unittest discover -s tests -v
 python samples/sample01_k4.py      # 4カ国・4色が必要な最小の例
 python samples/sample02_seven.py   # 7カ国・3色で足りる少し大きい例
 python samples/sample03_point.py   # 7カ国が1点に集まる例 (無色ノード)
+
+# デモ: ハニカムグラフ → 2軸ラベル表 (区切り・仮色値つき) の生成
+python samples/axistable_demo.py
 
 # デモ: ランダム地図の生成 → 4彩色 → 盤面表示 (旧モデル: ノード=六角形セル)
 python demo.py 10 0    # 盤サイズ m=10, seed=0

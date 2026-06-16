@@ -23,73 +23,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "samples"))
 
+from fourcolor.axistable import (column_groups, cumulative_labels,
+                                 row_groups)
 from fourcolor.dsu import DSU
 from fourcolor.rowlabel import colorless_nodes
-from fourcolor.verify import edge_key
 
 import sample01_k4
 import sample02_seven
 import sample03_point
-
-
-def row_groups(grid):
-    """行ごとのノード列 (row_labels のスキャン順そのもの)。"""
-    return [[(r, p) for p in range(1, 2 * r)] for r in range(1, grid.size + 1)]
-
-
-def column_groups(grid):
-    """「縦」のノード列。列 k = (p-1)//2 ごとに、
-
-      ▲(k+1, 2k+1), ▽(k+2, 2k+2), ▲(k+2, 2k+1), ▽(k+3, 2k+2), ...
-
-    の順にジグザグで並べる (▲→▽ は行間エッジ、▽→▲ は行内エッジ)。
-    """
-    groups = []
-    size = grid.size
-    for k in range(size):
-        seq = []
-        r = k + 1
-        while True:
-            up = (r, 2 * k + 1)
-            if not grid.is_valid(up):
-                break
-            seq.append(up)
-            down = (r + 1, 2 * k + 2)
-            if not grid.is_valid(down):
-                break
-            seq.append(down)
-            r += 1
-        groups.append(seq)
-    return groups
-
-
-def cumulative_labels(groups, edges, colorless):
-    """グループごとに仮ラベルを付け、グループ間は最後の値 +2 から続ける。"""
-    labels = {}
-    offset = 0
-    for group in groups:
-        last_c = None
-        prev_node = None
-        for node in group:
-            if node in colorless:
-                prev_node = node
-                continue
-            if last_c is None:
-                c = offset + 1
-            else:
-                sv = edges[edge_key(prev_node, node)]["same_value"]
-                if sv is True:
-                    c = last_c
-                elif sv is False:
-                    c = last_c + 1
-                else:
-                    c = last_c + 2
-            labels[node] = c
-            last_c = c
-            prev_node = node
-        if last_c is not None:
-            offset = last_c + 1
-    return labels
 
 
 def check_sample(name, build_sample):
