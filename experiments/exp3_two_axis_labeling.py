@@ -38,8 +38,9 @@ def check_sample(name, build_sample):
     colorless = colorless_nodes(grid, edges)
     nodes = [n for n in grid.nodes() if n not in colorless]
 
-    h_labels = cumulative_labels(row_groups(grid), edges, colorless)
-    v_labels = cumulative_labels(column_groups(grid), edges, colorless)
+    # 無色ノードにもラベルが付くが、ここでは非無色ノードだけを見る
+    h_labels = cumulative_labels(row_groups(grid), edges)
+    v_labels = cumulative_labels(column_groups(grid), edges)
 
     print(f"--- {name} ---")
 

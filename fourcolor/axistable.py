@@ -1,21 +1,23 @@
 """ハニカムグラフ → 横ラベル・縦ラベル2軸の表 (docs/09)。
 
-各ノードに横ラベル h と縦ラベル v を付け（rowlabel と同じ規則。行・列の
-区切りでは +2 する）、(h, v) を座標とする2次元の表を作る。
+各ノードに横ラベル h と縦ラベル v を付け（行・列の区切りでは +2 する）、
+(h, v) を座標とする2次元の表を作る。無色ノードにも列・行を与える（表現B）。
 
-セルの値は3種類（数値で統一）:
-  -1 (SEP)   … 区切りセル。横/縦ラベルが +2 で飛んだ位置（改行・無色ノード）。
-               区切られたブロックの境界を表す。
-   0 (EMPTY) … ブロック内だが対応ノードが無い空きセル。
-  >=1        … ノードセルの仮色値。初期値は「国ごとに一意の整数」
-               （= N色の正しい塗り分け。ここから色数を 4 以下へ減らす）。
+セルの値（数値で統一。符号で「ノードの有無」が読める）:
+  >=1 (有色)    … 有色ノードの仮色値。初期値は「国ごとに一意の整数」
+                  （= N色の正しい塗り分け。ここから色数を 4 以下へ減らす）。
+   0 (COLORLESS)… 無色ノードのセル（実在するノードだが色なし・制約なし）。
+  -1 (EMPTY)    … ブロック内だがノードが無い空きセル。
+  -2 (SEP)      … 区切りセル（ブロックの外、境界）。
+  → 値 >= 0 ⇔ そのマスにハニカムのノードがある。
 """
 
 from .rowlabel import colorless_nodes
 from .verify import edge_key
 
-SEP = -1    # 区切りセル
-EMPTY = 0   # ブロック内の空きセル
+SEP = -2        # 区切りセル
+EMPTY = -1      # ブロック内の空きセル
+COLORLESS = 0   # 無色ノードのセル
 
 
 def row_groups(grid):
@@ -43,27 +45,23 @@ def column_groups(grid):
     return groups
 
 
-def cumulative_labels(groups, edges, colorless):
-    """グループごとに番号を振り、グループ間は最後の値 +2 から続ける。"""
+def cumulative_labels(groups, edges):
+    """グループごとに番号を振り、グループ間は最後の値 +2 から続ける。
+
+    無色ノードにも番号を振る（None エッジは国境と同じ +1 として扱う）。
+    こうすると無色ノードが列・行を1つ占め、規則的な三角階段が保たれる。
+    """
     labels = {}
     offset = 0
     for group in groups:
         last_c = None
         prev = None
         for node in group:
-            if node in colorless:
-                prev = node
-                continue
             if last_c is None:
                 c = offset + 1
             else:
                 sv = edges[edge_key(prev, node)]["same_value"]
-                if sv is True:
-                    c = last_c          # 同じセグメント
-                elif sv is False:
-                    c = last_c + 1      # 国境を越えた
-                else:
-                    c = last_c + 2      # 無色ノードを挟んだ
+                c = last_c if sv is True else last_c + 1  # False も None も +1
             labels[node] = c
             last_c = c
             prev = node
@@ -73,10 +71,9 @@ def cumulative_labels(groups, edges, colorless):
 
 
 def axis_labels(grid, edges):
-    """各ノードの横ラベル h と縦ラベル v を返す。"""
-    colorless = colorless_nodes(grid, edges)
-    h = cumulative_labels(row_groups(grid), edges, colorless)
-    v = cumulative_labels(column_groups(grid), edges, colorless)
+    """各ノード（無色ノードを含む）の横ラベル h と縦ラベル v を返す。"""
+    h = cumulative_labels(row_groups(grid), edges)
+    v = cumulative_labels(column_groups(grid), edges)
     return h, v
 
 
@@ -91,15 +88,18 @@ def build_axis_table(grid, edges, country_of):
     """2軸ラベル表を作る。
 
     返り値: (table, h, v, cid)
-      table … table[i][j] がセル値 (-1/0/>=1)。i 行目は縦ラベル v=i+1、
-              j 列目は横ラベル h=j+1 に対応する。
-      h, v  … {ノード: ラベル}（無色ノードは含まない）
+      table … table[i][j] がセル値。i 行目は縦ラベル v=i+1、j 列目は横ラベル h=j+1。
+      h, v  … {ノード: ラベル}（無色ノードも含む）
       cid   … {国: 仮色値(>=1)}
     """
     h, v = axis_labels(grid, edges)
-    nodes = list(h)  # ラベルを持つ（= 無色でない）ノード
-    cid = country_seed(nodes, country_of)
-    node_cell = {(h[n], v[n]): cid[country_of[n]] for n in nodes}
+    colorless = colorless_nodes(grid, edges)
+    colored = [n for n in h if n not in colorless]
+    cid = country_seed(colored, country_of)
+    node_cell = {}
+    for n in h:
+        node_cell[(h[n], v[n])] = (COLORLESS if n in colorless
+                                   else cid[country_of[n]])
     used_h = set(h.values())
     used_v = set(v.values())
     max_h, max_v = max(used_h), max(used_v)
@@ -116,11 +116,13 @@ def build_axis_table(grid, edges, country_of):
 
 
 def table_to_str(table):
-    """表を見やすい文字列にする（区切り=空白, 空き=., ノード=仮色値）。"""
+    """表を見やすい文字列にする（区切り=空白, 空き=., 無色=o, 有色=仮色値）。"""
     def cell(x):
         if x == SEP:
             return "  "
         if x == EMPTY:
             return " ."
+        if x == COLORLESS:
+            return " o"
         return f"{x:2d}"
     return "\n".join("".join(cell(x) for x in row) for row in table)

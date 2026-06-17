@@ -15,11 +15,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fourcolor.axistable import (EMPTY, SEP, axis_labels, build_axis_table,
-                                 country_seed)
+from fourcolor.axistable import (COLORLESS, EMPTY, SEP, axis_labels,
+                                 build_axis_table, country_seed)
 from fourcolor.render import STYLE, _line, _poly, _text, build_palette
 
 import sample01_k4
+import sample03_point
 
 SQRT3 = 3 ** 0.5
 
@@ -43,9 +44,14 @@ def honeycomb_panel(grid, country_of, edges, labels, pal, org, side, title):
                          stroke=STYLE["boundary"], stroke_width=2.5))
     for node in grid.nodes():
         cx, cy = grid.node_center(node, side, org)
-        fill = pal[country_of[node]]
-        out.append(f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="13" fill="{fill}" '
-                   f'stroke="{STYLE["node_stroke"]}" stroke-width="1.2"/>')
+        if country_of[node] is None:  # 無色ノード: 白丸（破線）+ ラベル
+            out.append(f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="13" '
+                       f'fill="{STYLE["colorless"]}" stroke="{STYLE["node_stroke"]}" '
+                       f'stroke-width="1.2" stroke-dasharray="3 2"/>')
+        else:
+            out.append(f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="13" '
+                       f'fill="{pal[country_of[node]]}" '
+                       f'stroke="{STYLE["node_stroke"]}" stroke-width="1.2"/>')
         out.append(_text(cx, cy + 5, str(labels[node]), size=14,
                          color=STYLE["text"], bold=True))
     return out
@@ -112,6 +118,11 @@ def table_svg(grid, country_of, edges, cell=28):
                 out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell-2}" '
                            f'height="{cell-2}" fill="#fbfbfb" stroke="#e2e2e2" '
                            f'stroke-width="1"/>')
+            elif val == COLORLESS:  # 無色ノード: 白塗り＋実線枠（ノードはある）
+                out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell-2}" '
+                           f'height="{cell-2}" fill="{STYLE["colorless"]}" '
+                           f'stroke="{STYLE["node_stroke"]}" stroke-width="1.2" '
+                           f'stroke-dasharray="3 2"/>')
             else:
                 out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell-2}" '
                            f'height="{cell-2}" fill="{id_color[val]}" '
@@ -124,14 +135,16 @@ def table_svg(grid, country_of, edges, cell=28):
 
 
 def main():
-    grid, country_of, edges = sample01_k4.build_sample()
     here = Path(__file__).resolve().parent
-    (here / "axistable_sample01_labels.svg").write_text(
-        labels_svg(grid, country_of, edges), encoding="utf-8")
-    (here / "axistable_sample01_table.svg").write_text(
-        table_svg(grid, country_of, edges), encoding="utf-8")
-    print("生成: samples/axistable_sample01_labels.svg")
-    print("生成: samples/axistable_sample01_table.svg")
+    for mod, tag, side in [(sample01_k4, "sample01", 64),
+                           (sample03_point, "sample03", 52)]:
+        grid, country_of, edges = mod.build_sample()
+        (here / f"axistable_{tag}_labels.svg").write_text(
+            labels_svg(grid, country_of, edges, side=side), encoding="utf-8")
+        (here / f"axistable_{tag}_table.svg").write_text(
+            table_svg(grid, country_of, edges), encoding="utf-8")
+        print(f"生成: samples/axistable_{tag}_labels.svg")
+        print(f"生成: samples/axistable_{tag}_table.svg")
 
 
 if __name__ == "__main__":
