@@ -194,6 +194,11 @@ class SoundnessTest(unittest.TestCase):
         self.assertIsNone(color_clusters(adj, 4))   # 4色で塗れない
         self.assertIsNotNone(color_clusters(adj, 5))
 
+    def test_staircase_n3_all_four_colorable(self):
+        """強い条件（三角階段）: n=3 の 2×2 ブロック表は全て4色で塗れる (exp5)。"""
+        from exp5_staircase_soundness import search
+        self.assertEqual(search(3), [])  # 4色不能なものは無い
+
 
 if __name__ == "__main__":
     unittest.main()
