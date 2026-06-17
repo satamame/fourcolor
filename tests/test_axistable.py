@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "samples"))
 
-from fourcolor.axistable import (COLORLESS, EMPTY, SEP, axis_labels,
+from fourcolor.axistable import (COLORLESS, EMPTY, SEP, AxisTable, axis_labels,
                                  build_axis_table, country_seed)
 from fourcolor.rowlabel import colorless_nodes
 import sample01_k4
@@ -130,6 +130,51 @@ class AxisTableTest(unittest.TestCase):
                 for j in range(grid.size):
                     self.assertEqual((i, j) in cells, j <= i)
                 self.assertEqual(len(cells[(i, i)]), 1)
+
+
+class AxisTableClassTest(unittest.TestCase):
+
+    def tables(self):
+        for mod in SAMPLES:
+            grid, country_of, edges = mod.build_sample()
+            yield mod, AxisTable.from_honeycomb(grid, edges, country_of)
+
+    def test_from_honeycomb_well_formed(self):
+        for mod, t in self.tables():
+            self.assertEqual(t.structure_errors(), [],
+                             f"{mod.__name__}: 構造エラー {t.structure_errors()}")
+
+    def test_initial_coloring_is_valid(self):
+        """初期の仮色値（国ごとに一意）は正しい塗り分けで、色数=国数。"""
+        for mod, t in self.tables():
+            self.assertTrue(t.is_valid_coloring(),
+                            f"{mod.__name__}: {t.coloring_violations()}")
+            self.assertEqual(t.n_colors(), len(t.cid))
+
+    def test_merge_reduces_color_count(self):
+        _, t = next(self.tables())  # サンプル01
+        before = t.n_colors()
+        cs = sorted(t.colors())
+        t.merge(cs[0], cs[1])
+        self.assertEqual(t.n_colors(), before - 1)
+
+    def test_merge_adjacent_breaks_validity(self):
+        """K4 のサンプル01 はどの2国も隣接 → どの併合も不等式違反になる。"""
+        _, t = next(self.tables())
+        cs = sorted(t.colors())
+        t.merge(cs[0], cs[1])
+        self.assertFalse(t.is_valid_coloring())
+
+    def test_structure_detects_bad_table(self):
+        """対角ブロックに2セルある不正な表は構造エラーになる。"""
+        t = AxisTable([[1, 2]])  # 1ブロックに2ノード = 対角ブロックが2セル
+        self.assertNotEqual(t.structure_errors(), [])
+
+    def test_direct_construction(self):
+        """生の2次元リストからも作れる（ハニカム以外の入口）。"""
+        t = AxisTable([[1, SEP, 2]])
+        self.assertEqual(t.n_cols, 3)
+        self.assertEqual(t.n_colors(), 2)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fourcolor.axistable import build_axis_table, table_to_str
+from fourcolor.axistable import AxisTable
 
 import sample01_k4
 import sample02_seven
@@ -24,11 +24,14 @@ def main():
                       (sample02_seven, "サンプル02 (7カ国)"),
                       (sample03_point, "サンプル03 (無色ノード)")]:
         grid, country_of, edges = mod.build_sample()
-        table, h, v, cid = build_axis_table(grid, edges, country_of)
+        table = AxisTable.from_honeycomb(grid, edges, country_of)
         print(f"=== {name} ===")
-        print(f"国 → 仮色値: {cid}")
-        print(f"表の大きさ: {len(table)} 行 × {len(table[0])} 列")
-        print(table_to_str(table))
+        print(f"国 → 仮色値: {table.cid}")
+        print(f"表の大きさ: {table.n_rows} 行 × {table.n_cols} 列  "
+              f"色数: {table.n_colors()}")
+        print(f"構造が整合: {table.is_well_formed()}  "
+              f"初期の塗り分けが正しい: {table.is_valid_coloring()}")
+        print(table)
         print()
 
 
