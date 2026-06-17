@@ -26,6 +26,8 @@
   （Q1: 同ラベルの統合は可逆／Q2: 両ルール ⟺ 地図の塗り分け）と、
   区切り・仮色値を持つ表の生成（[fourcolor/axistable.py](fourcolor/axistable.py)、
   `python samples/axistable_demo.py`、`experiments/exp3_two_axis_labeling.py`）。
+  §6 で健全性: 主張1〜3 だけでは4色不能の表（K5）が作れる
+  （`experiments/exp4_soundness.py`）。
 - [docs/01_アイデア整理と検証.md](docs/01_アイデア整理と検証.md) —
   これまでのアイデアメモの整理と数学的検証。
 - [docs/02_開発計画.md](docs/02_開発計画.md) — フェーズ別ロードマップとリポジトリ構成。
