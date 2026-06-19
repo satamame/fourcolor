@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "samples"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments"))
 
 from fourcolor.baseline import solve
 from fourcolor.mapcheck import build_edges
@@ -61,6 +62,18 @@ class SquareTableTest(unittest.TestCase):
     def test_samples_main_run(self):
         square_sample01.main()       # 内部の assert が通ること
         square_sample02_point.main()
+
+    def test_weak_conditions_insufficient_k5(self):
+        """四角版でも弱い条件だけでは4色不能の表（K5）が作れる (exp6)。"""
+        from exp6_square_soundness import (build_square_k5, constraint_graph,
+                                           square_weak_ok)
+        from fourcolor.baseline import color_clusters
+        t = build_square_k5()
+        self.assertTrue(square_weak_ok(t))         # 弱い条件は満たす
+        adj = constraint_graph(t)
+        self.assertEqual(len(adj), 5)              # K5
+        self.assertTrue(all(len(s) == 4 for s in adj.values()))
+        self.assertIsNone(color_clusters(adj, 4))  # 4色で塗れない
 
 
 if __name__ == "__main__":
