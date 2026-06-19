@@ -136,3 +136,129 @@ def table_equivalence(grid, edges, country_of):
             max_block = max(max_block, cnt)
 
     return eq_ok, border_ok, max_block
+
+
+# ---- 健全性: 表 → 格子グラフ → 平面地図 の再構成（色を使わない判定）----
+
+def _index_runs(indices):
+    out = []
+    for x in indices:
+        if out and x == out[-1][-1] + 1:
+            out[-1].append(x)
+        else:
+            out.append([x])
+    return out
+
+
+def reconstruct(table):
+    """2軸表から格子（マスの集まり）を再構成する。
+
+    返り値 (square, reason):
+      square … {(grid_row, grid_col): セル値}  値>=1 が国、0 が無色
+      reason … 再構成できない場合の理由（このとき square は None）
+    対応: 列ブロック=格子の行、行ブロック=格子の列、各ブロック1マス。
+    """
+    cells = table.cells
+    nrow, ncol = table.n_rows, table.n_cols
+    sep_rows = {i for i in range(nrow) if all(x == SEP for x in cells[i])}
+    sep_cols = {j for j in range(ncol)
+                if all(cells[i][j] == SEP for i in range(nrow))}
+    col_blocks = _index_runs([j for j in range(ncol) if j not in sep_cols])
+    row_blocks = _index_runs([i for i in range(nrow) if i not in sep_rows])
+    square = {}
+    for a, cb in enumerate(col_blocks):
+        for b, rb in enumerate(row_blocks):
+            occ = [(i, j) for i in rb for j in cb if cells[i][j] >= 0]
+            if len(occ) > 1:
+                return None, f"ブロック(行{a},列{b})にマスが{len(occ)}個（>1）"
+            if occ:
+                i, j = occ[0]
+                square[(a, b)] = cells[i][j]
+    return square, None
+
+
+def is_grid_realizable(table):
+    """表が格子由来（=平面地図）として再構成できるかを、色を使わず判定する。
+
+    条件（格子由来なら満たすべき構造）:
+      1. 各ブロックは最大1マス（reconstruct が成功する）。
+      2. 各列・各行は単色（同じ国）。
+      3. 各国が格子上で辺連結（ポリオミノ）。
+      4. 再構成した格子の国境が、表の差1の隣接とちょうど一致する。
+    すべて満たせば「格子由来 ⟹ 平面地図」が言え、四色定理から4色可が従う。
+
+    返り値 (ok, reason)。
+    """
+    from collections import deque
+
+    cells = table.cells
+    nrow, ncol = table.n_rows, table.n_cols
+
+    # 2. 各列・各行は単色
+    col_color, row_color = {}, {}
+    for j in range(ncol):
+        vals = {cells[i][j] for i in range(nrow) if cells[i][j] >= 1}
+        if len(vals) > 1:
+            return False, f"列 {j} が単色でない: {sorted(vals)}"
+        if vals:
+            col_color[j] = next(iter(vals))
+    for i in range(nrow):
+        vals = {x for x in cells[i] if x >= 1}
+        if len(vals) > 1:
+            return False, f"行 {i} が単色でない: {sorted(vals)}"
+        if vals:
+            row_color[i] = next(iter(vals))
+
+    # 1. 再構成
+    square, reason = reconstruct(table)
+    if square is None:
+        return False, reason
+
+    present = set(square)
+
+    def grid_neighbors(p):
+        a, b = p
+        for q in ((a - 1, b), (a + 1, b), (a, b - 1), (a, b + 1)):
+            if q in present:
+                yield q
+
+    # 3. 各国が辺連結
+    by_country = {}
+    for p, val in square.items():
+        if val >= 1:
+            by_country.setdefault(val, []).append(p)
+    for c, ps in by_country.items():
+        seen, dq = {ps[0]}, deque([ps[0]])
+        while dq:
+            cur = dq.popleft()
+            for q in grid_neighbors(cur):
+                if square[q] == c and q not in seen:
+                    seen.add(q)
+                    dq.append(q)
+        if len(seen) != len(ps):
+            return False, (f"国 {c} が辺連結でない"
+                           f"（{len(ps)}マスが分裂）")
+
+    # 4. 国境の一致（再構成の隣接 == 表の差1）
+    rec_borders = set()
+    for (a, b), val in square.items():
+        if val < 1:
+            continue
+        for q in ((a + 1, b), (a, b + 1)):
+            if q in square and square[q] >= 1 and square[q] != val:
+                rec_borders.add(frozenset((val, square[q])))
+    table_borders = set()
+    for j in range(ncol - 1):
+        if j in col_color and j + 1 in col_color and \
+                col_color[j] != col_color[j + 1]:
+            table_borders.add(frozenset((col_color[j], col_color[j + 1])))
+    for i in range(nrow - 1):
+        if i in row_color and i + 1 in row_color and \
+                row_color[i] != row_color[i + 1]:
+            table_borders.add(frozenset((row_color[i], row_color[i + 1])))
+    if rec_borders != table_borders:
+        return False, (f"国境が表の差1と一致しない: "
+                       f"再構成={sorted(map(sorted, rec_borders))} "
+                       f"表={sorted(map(sorted, table_borders))}")
+
+    return True, None

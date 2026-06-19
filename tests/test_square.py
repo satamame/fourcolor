@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments"))
 from fourcolor.baseline import solve
 from fourcolor.mapcheck import build_edges
 from fourcolor.square import SquareGrid
-from fourcolor.squaretable import table_equivalence
+from fourcolor.squaretable import (build_square_table, is_grid_realizable,
+                                   table_equivalence)
 from fourcolor.verify import is_valid_coloring
 
 import square_sample01
@@ -74,6 +75,22 @@ class SquareTableTest(unittest.TestCase):
         self.assertEqual(len(adj), 5)              # K5
         self.assertTrue(all(len(s) == 4 for s in adj.values()))
         self.assertIsNone(color_clusters(adj, 4))  # 4色で塗れない
+
+    def test_grid_derived_is_reconstructible(self):
+        """格子由来の表は、色を使わず再構成でき平面地図と判定される (exp7)。"""
+        for build in (square_sample01.build_sample,
+                      square_sample02_point.build_sample):
+            grid, country_of, edges = build()
+            table, _, _ = build_square_table(grid, edges, country_of)
+            ok, reason = is_grid_realizable(table)
+            self.assertTrue(ok, reason)
+
+    def test_k5_not_reconstructible(self):
+        """弱い条件のみの K5 表は再構成できない（辺連結性で詰まる）(exp7)。"""
+        from exp6_square_soundness import build_square_k5
+        ok, reason = is_grid_realizable(build_square_k5())
+        self.assertFalse(ok)
+        self.assertIn("辺連結", reason)
 
 
 if __name__ == "__main__":
