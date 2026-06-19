@@ -71,36 +71,37 @@ def table_equivalence(grid, edges, country_of):
       max_block_cells … 区切りで囲まれた1ブロック内の最大セル数（四角は1のはず）
     """
     h, v = square_axis_labels(grid, edges)
-    nodes = list(h)
+    colorless = colorless_nodes(grid, edges)
+    colored = [n for n in h if n not in colorless]  # 無色ノードは国でない
 
-    # 等式の推移閉包
+    # 等式の推移閉包（有色ノードのみ）
     dsu = DSU()
-    for n in nodes:
+    for n in colored:
         dsu.find(n)
     by_h, by_v = {}, {}
-    for n in nodes:
+    for n in colored:
         by_h.setdefault(h[n], []).append(n)
         by_v.setdefault(v[n], []).append(n)
     for group in list(by_h.values()) + list(by_v.values()):
         for a in group[1:]:
             dsu.union(group[0], a)
     clusters = {}
-    for n in nodes:
+    for n in colored:
         clusters.setdefault(dsu.find(n), set()).add(n)
 
-    # baseline の国分割
+    # baseline の国分割（有色ノードのみ）
     bdsu, badj = build_cluster_graph(edges)
     bclusters = {}
-    for n in nodes:
+    for n in colored:
         bclusters.setdefault(bdsu.find(n), set()).add(n)
     eq_ok = ({frozenset(s) for s in clusters.values()}
              == {frozenset(s) for s in bclusters.values()})
 
-    # 差1 の異色ペア（国名で）
+    # 差1 の異色ペア（有色ノードのみ。国名で）
     pairs = set()
     for axis in (h, v):
         by = {}
-        for n in nodes:
+        for n in colored:
             by.setdefault(axis[n], []).append(n)
         for val in by:
             if val + 1 in by:
@@ -112,7 +113,9 @@ def table_equivalence(grid, edges, country_of):
                         for a, nbs in badj.items() for b in nbs}
     border_ok = pairs == baseline_borders
 
-    # ブロック内の最大セル数
+    # ブロック内の最大セル数（無色マスも1セルとして数える）
+    nodes = list(h)
+
     def runs(values):
         vals = sorted(set(values))
         out, cur = [], [vals[0]]

@@ -17,6 +17,7 @@ from fourcolor.squaretable import table_equivalence
 from fourcolor.verify import is_valid_coloring
 
 import square_sample01
+import square_sample02_point
 
 # K4 でない別の地図（縦帯3色: A|B|C, 隣り合うものだけ隣接 = パス）
 STRIPES = {(r, c): "ABC"[c] for r in range(3) for c in range(3)}
@@ -51,8 +52,15 @@ class SquareTableTest(unittest.TestCase):
     def test_blocks(self):
         self._check(SquareGrid(4, 4), BLOCKS)
 
-    def test_sample01_main_runs(self):
-        square_sample01.main()  # 内部の assert が通ること
+    def test_sample02_colorless(self):
+        grid, country_of, edges = square_sample02_point.build_sample()
+        self.assertIsNotNone(solve(edges, 3))
+        self.assertIsNone(solve(edges, 2))         # C5: 2色不可
+        self._check(grid, country_of)
+
+    def test_samples_main_run(self):
+        square_sample01.main()       # 内部の assert が通ること
+        square_sample02_point.main()
 
 
 if __name__ == "__main__":

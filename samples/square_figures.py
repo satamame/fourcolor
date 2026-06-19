@@ -21,6 +21,7 @@ from fourcolor.square import SquareGrid
 from fourcolor.squaretable import build_square_table, square_axis_labels
 
 import square_sample01
+import square_sample02_point
 
 
 def square_panel(grid, country_of, labels, pal, org, side, title):
@@ -124,14 +125,16 @@ def table_svg(grid, country_of, edges, cell=28):
 
 
 def main():
-    grid, country_of, edges = square_sample01.build_sample()
     here = Path(__file__).resolve().parent
-    (here / "square_sample01_labels.svg").write_text(
-        labels_svg(grid, country_of, edges), encoding="utf-8")
-    (here / "square_sample01_table.svg").write_text(
-        table_svg(grid, country_of, edges), encoding="utf-8")
-    print("生成: samples/square_sample01_labels.svg")
-    print("生成: samples/square_sample01_table.svg")
+    for mod, tag in [(square_sample01, "square_sample01"),
+                     (square_sample02_point, "square_sample02")]:
+        grid, country_of, edges = mod.build_sample()
+        (here / f"{tag}_labels.svg").write_text(
+            labels_svg(grid, country_of, edges), encoding="utf-8")
+        (here / f"{tag}_table.svg").write_text(
+            table_svg(grid, country_of, edges), encoding="utf-8")
+        print(f"生成: samples/{tag}_labels.svg")
+        print(f"生成: samples/{tag}_table.svg")
 
 
 if __name__ == "__main__":
