@@ -154,9 +154,11 @@ def reconstruct(table):
     """2軸表から格子（マスの集まり）を再構成する。
 
     返り値 (square, reason):
-      square … {(grid_row, grid_col): セル値}  値>=1 が国、0 が無色
+      square … {(grid_row, grid_col): (i, j)}  元のセル位置（有色/無色）
       reason … 再構成できない場合の理由（このとき square は None）
     対応: 列ブロック=格子の行、行ブロック=格子の列、各ブロック1マス。
+    セルの「値」は仮色値であって国ではないので、ここでは位置だけを返す
+    （「国」= 等式の同値類は is_grid_realizable 側で構成する）。
     """
     cells = table.cells
     nrow, ncol = table.n_rows, table.n_cols
@@ -172,18 +174,41 @@ def reconstruct(table):
             if len(occ) > 1:
                 return None, f"ブロック(行{a},列{b})にマスが{len(occ)}個（>1）"
             if occ:
-                i, j = occ[0]
-                square[(a, b)] = cells[i][j]
+                square[(a, b)] = occ[0]
     return square, None
+
+
+def _country_classes(table):
+    """「国」= 等式の同値類を構成する（仮色値ではなく構造から）。
+
+    有色セル（値>=1）を、同じ横ラベル(列)・同じ縦ラベル(行)で併合した
+    Union-Find を返す。無色セル(0)は国でないので含めない。
+    """
+    cells = table.cells
+    nrow, ncol = table.n_rows, table.n_cols
+    colored = [(i, j) for i in range(nrow) for j in range(ncol)
+               if cells[i][j] >= 1]
+    dsu = DSU()
+    for p in colored:
+        dsu.find(p)
+    by_row, by_col = {}, {}
+    for (i, j) in colored:
+        by_row.setdefault(i, []).append((i, j))
+        by_col.setdefault(j, []).append((i, j))
+    for grp in list(by_row.values()) + list(by_col.values()):
+        for p in grp[1:]:
+            dsu.union(grp[0], p)
+    return dsu
 
 
 def is_grid_realizable(table):
     """表が格子由来（=平面地図）として再構成できるかを、色を使わず判定する。
 
-    条件（格子由来なら満たすべき構造）:
+    「国」は仮色値ではなく**等式の同値類**（同じ横/縦ラベルでつながる有色セル）。
+    格子由来なら満たすべき構造:
       1. 各ブロックは最大1マス（reconstruct が成功する）。
-      2. 各列・各行は単色（同じ国）。
-      3. 各国が格子上で辺連結（ポリオミノ）。
+      2. 各列・各行のノード有セルは単色（条件1,2 が成立している）。
+      3. 各国（同値類）が格子上で辺連結（ポリオミノ）。
       4. 再構成した格子の国境が、表の差1の隣接とちょうど一致する。
     すべて満たせば「格子由来 ⟹ 平面地図」が言え、四色定理から4色可が従う。
 
@@ -194,27 +219,25 @@ def is_grid_realizable(table):
     cells = table.cells
     nrow, ncol = table.n_rows, table.n_cols
 
-    # 2. 各列・各行は単色
-    col_color, row_color = {}, {}
+    # 2. 各列・各行のノード有セルは単色（条件1,2 の確認）
     for j in range(ncol):
-        vals = {cells[i][j] for i in range(nrow) if cells[i][j] >= 1}
-        if len(vals) > 1:
-            return False, f"列 {j} が単色でない: {sorted(vals)}"
-        if vals:
-            col_color[j] = next(iter(vals))
+        if len({cells[i][j] for i in range(nrow) if cells[i][j] >= 0}) > 1:
+            return False, f"列 {j} が単色でない（条件1違反）"
     for i in range(nrow):
-        vals = {x for x in cells[i] if x >= 1}
-        if len(vals) > 1:
-            return False, f"行 {i} が単色でない: {sorted(vals)}"
-        if vals:
-            row_color[i] = next(iter(vals))
+        if len({x for x in cells[i] if x >= 0}) > 1:
+            return False, f"行 {i} が単色でない（条件2違反）"
 
-    # 1. 再構成
+    # 「国」= 等式の同値類
+    dsu = _country_classes(table)
+
+    # 1. 再構成（(a,b) -> 元のセル位置 (i,j)）
     square, reason = reconstruct(table)
     if square is None:
         return False, reason
-
     present = set(square)
+    # 各マスの「国」（同値類の代表）。無色マスは None。
+    sq_class = {ab: (dsu.find((i, j)) if cells[i][j] >= 1 else None)
+                for ab, (i, j) in square.items()}
 
     def grid_neighbors(p):
         a, b = p
@@ -222,43 +245,49 @@ def is_grid_realizable(table):
             if q in present:
                 yield q
 
-    # 3. 各国が辺連結
-    by_country = {}
-    for p, val in square.items():
-        if val >= 1:
-            by_country.setdefault(val, []).append(p)
-    for c, ps in by_country.items():
-        seen, dq = {ps[0]}, deque([ps[0]])
+    # 3. 各国（同値類）が辺連結
+    by_class = {}
+    for ab, cls in sq_class.items():
+        if cls is not None:
+            by_class.setdefault(cls, []).append(ab)
+    for cls, abs_ in by_class.items():
+        seen, dq = {abs_[0]}, deque([abs_[0]])
         while dq:
             cur = dq.popleft()
             for q in grid_neighbors(cur):
-                if square[q] == c and q not in seen:
+                if sq_class[q] == cls and q not in seen:
                     seen.add(q)
                     dq.append(q)
-        if len(seen) != len(ps):
-            return False, (f"国 {c} が辺連結でない"
-                           f"（{len(ps)}マスが分裂）")
+        if len(seen) != len(abs_):
+            return False, f"ある国（同値類）が辺連結でない（{len(abs_)}マスが分裂）"
 
-    # 4. 国境の一致（再構成の隣接 == 表の差1）
+    # 4. 国境の一致（再構成の隣接 == 表の差1）。国は同値類で識別する。
     rec_borders = set()
-    for (a, b), val in square.items():
-        if val < 1:
+    for (a, b), cls in sq_class.items():
+        if cls is None:
             continue
         for q in ((a + 1, b), (a, b + 1)):
-            if q in square and square[q] >= 1 and square[q] != val:
-                rec_borders.add(frozenset((val, square[q])))
+            if q in sq_class and sq_class[q] is not None and sq_class[q] != cls:
+                rec_borders.add(frozenset((cls, sq_class[q])))
+    col_class, row_class = {}, {}
+    for j in range(ncol):
+        cs = {dsu.find((i, j)) for i in range(nrow) if cells[i][j] >= 1}
+        if cs:
+            col_class[j] = next(iter(cs))
+    for i in range(nrow):
+        cs = {dsu.find((i, j)) for j in range(ncol) if cells[i][j] >= 1}
+        if cs:
+            row_class[i] = next(iter(cs))
     table_borders = set()
     for j in range(ncol - 1):
-        if j in col_color and j + 1 in col_color and \
-                col_color[j] != col_color[j + 1]:
-            table_borders.add(frozenset((col_color[j], col_color[j + 1])))
+        if j in col_class and j + 1 in col_class and \
+                col_class[j] != col_class[j + 1]:
+            table_borders.add(frozenset((col_class[j], col_class[j + 1])))
     for i in range(nrow - 1):
-        if i in row_color and i + 1 in row_color and \
-                row_color[i] != row_color[i + 1]:
-            table_borders.add(frozenset((row_color[i], row_color[i + 1])))
+        if i in row_class and i + 1 in row_class and \
+                row_class[i] != row_class[i + 1]:
+            table_borders.add(frozenset((row_class[i], row_class[i + 1])))
     if rec_borders != table_borders:
-        return False, (f"国境が表の差1と一致しない: "
-                       f"再構成={sorted(map(sorted, rec_borders))} "
-                       f"表={sorted(map(sorted, table_borders))}")
+        return False, "国境が表の差1と一致しない"
 
     return True, None

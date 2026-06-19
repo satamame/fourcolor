@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments"))
 from fourcolor.baseline import solve
 from fourcolor.mapcheck import build_edges
 from fourcolor.square import SquareGrid
+from fourcolor.axistable import AxisTable
 from fourcolor.squaretable import (build_square_table, is_grid_realizable,
                                    table_equivalence)
 from fourcolor.verify import is_valid_coloring
@@ -90,6 +91,30 @@ class SquareTableTest(unittest.TestCase):
         from exp6_square_soundness import build_square_k5
         ok, reason = is_grid_realizable(build_square_k5())
         self.assertFalse(ok)
+        self.assertIn("辺連結", reason)
+
+    def test_user_5conditions_insufficient(self):
+        """ユーザー提示の5条件をすべて満たすのに格子に再構成できない反例 (exp8)。
+
+        K5 は条件5（全ブロック1セル）を破るので反例ではないが、全ブロックを
+        埋めても 5条件だけでは不十分（国が辺連結にならない例がある）。
+        """
+        from exp8_user_conditions import check_user_conditions
+        S, E = -2, -1
+        cells = [
+            [1, E, S, E, E],
+            [E, E, S, 2, E],
+            [S, S, S, S, S],
+            [1, E, S, E, 1],
+            [E, E, S, E, E],
+            [S, S, S, S, S],
+            [1, E, S, E, E],
+            [E, E, S, 2, E],
+        ]
+        t = AxisTable(cells)
+        self.assertEqual(check_user_conditions(t), [])   # 5条件すべて満たす
+        ok, reason = is_grid_realizable(t)
+        self.assertFalse(ok)                             # でも再構成できない
         self.assertIn("辺連結", reason)
 
 
