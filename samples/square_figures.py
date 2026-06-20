@@ -124,17 +124,31 @@ def table_svg(grid, country_of, edges, cell=28):
     return "\n".join(out)
 
 
+def write_figures(mod, tag, outdir):
+    """地図モジュール mod から ①②(labels) と ③(table) の SVG を書き出す。"""
+    grid, country_of, edges = mod.build_sample()
+    (outdir / f"{tag}_labels.svg").write_text(
+        labels_svg(grid, country_of, edges), encoding="utf-8")
+    (outdir / f"{tag}_table.svg").write_text(
+        table_svg(grid, country_of, edges), encoding="utf-8")
+    print(f"生成: samples/{tag}_labels.svg  (①横ラベル / ②縦ラベル のグラフ)")
+    print(f"生成: samples/{tag}_table.svg   (③2軸ラベル表)")
+
+
 def main():
+    """引数に地図モジュール名を渡すとその図を生成。無指定なら同梱サンプル。
+
+    例: python samples/square_figures.py square_mymap
+    """
+    import importlib
     here = Path(__file__).resolve().parent
-    for mod, tag in [(square_sample01, "square_sample01"),
-                     (square_sample02_point, "square_sample02")]:
-        grid, country_of, edges = mod.build_sample()
-        (here / f"{tag}_labels.svg").write_text(
-            labels_svg(grid, country_of, edges), encoding="utf-8")
-        (here / f"{tag}_table.svg").write_text(
-            table_svg(grid, country_of, edges), encoding="utf-8")
-        print(f"生成: samples/{tag}_labels.svg")
-        print(f"生成: samples/{tag}_table.svg")
+    names = sys.argv[1:]
+    if names:
+        for name in names:
+            write_figures(importlib.import_module(name), name, here)
+    else:
+        write_figures(square_sample01, "square_sample01", here)
+        write_figures(square_sample02_point, "square_sample02", here)
 
 
 if __name__ == "__main__":
