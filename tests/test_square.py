@@ -116,6 +116,14 @@ class SquareTableTest(unittest.TestCase):
         ok, reason = is_grid_realizable(t)
         self.assertFalse(ok)                             # でも再構成できない
         self.assertIn("辺連結", reason)
+        # 条件6（連続性）はこの反例を弾く
+        from exp9_contiguity import contiguity_ok
+        self.assertFalse(contiguity_ok(t))
+
+    def test_contiguity_makes_sufficient_small(self):
+        """5条件+条件6 を満たす表は、A=2×B=3 の全列挙で全て再構成できる (exp9)。"""
+        from exp9_contiguity import search
+        self.assertIsNone(search(2, 3))   # 反例なし
 
 
 if __name__ == "__main__":
