@@ -125,6 +125,20 @@ class SquareTableTest(unittest.TestCase):
         from exp9_contiguity import search
         self.assertIsNone(search(2, 3))   # 反例なし
 
+    def test_six_conditions_are_necessary(self):
+        """格子由来の表は必ず6条件を満たす（必要条件）。サンプル＋ランダム (exp10)。"""
+        from exp10_necessity import check_map, random_connected_map
+        for build in (square_sample01.build_sample,
+                      square_sample02_point.build_sample):
+            grid, country_of, _ = build()
+            ok6, real = check_map(grid, country_of)
+            self.assertTrue(ok6 and real)
+        for seed in range(200):
+            rows, cols = 5, 5
+            co = random_connected_map(rows, cols, 1 + seed % 24, seed)
+            ok6, real = check_map(SquareGrid(rows, cols), co)
+            self.assertTrue(ok6 and real, f"seed={seed}")
+
 
 if __name__ == "__main__":
     unittest.main()
